@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { DrizzleService } from '../database/drizzle.service';
 import { RedisService } from '../redis/redis.service';
 import { Public } from '../common/decorators/public.decorator';
@@ -20,6 +21,7 @@ interface HealthResponse {
   timestamp: string;
 }
 
+@SkipThrottle()
 @ApiTags('health')
 @Controller('health')
 export class HealthController {

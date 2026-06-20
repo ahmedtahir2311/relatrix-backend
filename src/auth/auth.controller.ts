@@ -12,6 +12,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { Public } from '../common/decorators/public.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
@@ -32,6 +33,7 @@ export class AuthController {
   // ── Public routes ──────────────────────────────────────────────────────────
 
   @Public()
+  @Throttle({ auth: { ttl: 60_000, limit: 10 } })
   @Post('sign-up')
   @ApiOperation({ summary: 'Create a new account' })
   async signUp(@Body(new ZodValidationPipe(signUpSchema)) dto: SignUpDto) {
@@ -39,6 +41,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ auth: { ttl: 60_000, limit: 5 } })
   @Post('sign-in')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Sign in with email and password' })
@@ -47,6 +50,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ auth: { ttl: 60_000, limit: 3 } })
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Request a password reset link' })

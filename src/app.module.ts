@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { BullModule } from '@nestjs/bullmq';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { DrizzleModule } from './database/drizzle.module';
 import { RedisModule } from './redis/redis.module';
@@ -48,6 +49,12 @@ function parseRedisConnection(url: string) {
         },
       },
     }),
+    ThrottlerModule.forRoot([
+      // Global limit — 120 req/min per IP (generous baseline for all routes)
+      { name: 'global', ttl: 60_000, limit: 120 },
+      // Auth limit — overridden on sensitive endpoints to 5 req/min
+      { name: 'auth', ttl: 60_000, limit: 120 },
+    ]),
     BullModule.forRoot({ connection: parseRedisConnection(env.REDIS_URL) }),
     DrizzleModule,
     RedisModule,
@@ -59,6 +66,8 @@ function parseRedisConnection(url: string) {
     MigrationModule,
   ],
   providers: [
+    // Rate limiter runs first — fail fast before auth processing
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
 })

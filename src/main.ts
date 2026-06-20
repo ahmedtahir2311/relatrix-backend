@@ -3,6 +3,7 @@ import { Logger } from 'nestjs-pino';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
+import compression from 'compression';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
@@ -19,6 +20,15 @@ async function bootstrap() {
 
   // ── WebSocket (Socket.IO) ──────────────────────────────────────────────────
   app.useWebSocketAdapter(new IoAdapter(app));
+
+  // ── Compression ────────────────────────────────────────────────────────────
+  app.use(compression());
+
+  // ── Trust proxy (correct IP behind reverse proxies for rate limiting) ──────
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+
+  // ── Graceful shutdown ──────────────────────────────────────────────────────
+  app.enableShutdownHooks();
 
   // ── Security ────────────────────────────────────────────────────────────────
   app.use(
