@@ -1,8 +1,11 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
 import { DrizzleModule } from './database/drizzle.module';
 import { RedisModule } from './redis/redis.module';
 import { HealthModule } from './health/health.module';
+import { AuthModule } from './auth/auth.module';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { env, isDev } from './config/env';
 
 @Module({
@@ -21,6 +24,11 @@ import { env, isDev } from './config/env';
     DrizzleModule,
     RedisModule,
     HealthModule,
+    AuthModule,
+  ],
+  providers: [
+    // Apply JwtAuthGuard globally — use @Public() to exempt a route
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
 })
 export class AppModule {}
