@@ -5,6 +5,7 @@ import { DrizzleModule } from './database/drizzle.module';
 import { RedisModule } from './redis/redis.module';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
+import { SchemasModule } from './schemas/schemas.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { env, isDev } from './config/env';
 
@@ -25,6 +26,7 @@ import { env, isDev } from './config/env';
     RedisModule,
     HealthModule,
     AuthModule,
+    SchemasModule,
   ],
   providers: [
     // Apply JwtAuthGuard globally — use @Public() to exempt a route
