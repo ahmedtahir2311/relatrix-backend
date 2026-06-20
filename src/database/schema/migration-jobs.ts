@@ -36,6 +36,7 @@ export interface MigrationJobConfig {
   schemaId: string;
   format: 'SQL_FILE' | 'DIRECT_APPLY';
   mode: 'safe' | 'replace';
+  dialect: 'postgresql' | 'mysql';
   connectionId?: string;
 }
 
@@ -45,9 +46,13 @@ export interface MigrationErrorInfo {
 }
 
 export interface MigrationExportInfo {
+  /** Relative URL served by GET /api/migration/jobs/:id/download */
   downloadUrl: string;
   fileName: string;
   fileSizeBytes: number;
+  sql: string;
+  dialect: 'postgresql' | 'mysql';
+  tablesApplied: string[];
 }
 
 export type MigrationJob = typeof migrationJobs.$inferSelect;

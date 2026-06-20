@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { SchemasModule } from './schemas/schemas.module';
 import { ConnectionsModule } from './connections/connections.module';
 import { GenerationModule } from './generation/generation.module';
+import { MigrationModule } from './migration/migration.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { env, isDev } from './config/env';
 
@@ -55,6 +56,7 @@ function parseRedisConnection(url: string) {
     SchemasModule,
     ConnectionsModule,
     GenerationModule,
+    MigrationModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
