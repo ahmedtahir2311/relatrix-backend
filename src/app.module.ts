@@ -6,6 +6,7 @@ import { RedisModule } from './redis/redis.module';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { SchemasModule } from './schemas/schemas.module';
+import { ConnectionsModule } from './connections/connections.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { env, isDev } from './config/env';
 
@@ -27,6 +28,7 @@ import { env, isDev } from './config/env';
     HealthModule,
     AuthModule,
     SchemasModule,
+    ConnectionsModule,
   ],
   providers: [
     // Apply JwtAuthGuard globally — use @Public() to exempt a route
