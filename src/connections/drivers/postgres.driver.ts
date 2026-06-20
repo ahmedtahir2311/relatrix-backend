@@ -30,6 +30,15 @@ export class PostgresDriver implements IDbDriver {
     }
   }
 
+  async executeSql(sql: string): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query(sql);
+    } finally {
+      client.release();
+    }
+  }
+
   async disconnect(): Promise<void> {
     await this.pool.end();
   }

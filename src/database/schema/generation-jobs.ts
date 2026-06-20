@@ -58,9 +58,20 @@ export interface GenerationEstimate {
 }
 
 export interface ExportInfo {
-  downloadUrl: string;
+  format: 'SQL' | 'CSV' | 'JSON' | 'DIRECT_SEED';
   fileName: string;
   fileSizeBytes: number;
+  // Virtual download URL served by GET /api/generation/jobs/:id/export
+  downloadUrl: string;
+  // Embedded content (MVP — production would use object storage)
+  sql?: string;
+  json?: Record<string, unknown[]>;
+  csv?: Record<string, string>;
+  directSeed?: {
+    connectionId: string;
+    tablesSeeded: string[];
+    rowsInserted: number;
+  };
 }
 
 export interface ErrorInfo {

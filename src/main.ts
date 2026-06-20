@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
@@ -15,6 +16,9 @@ async function bootstrap() {
 
   // ── Logger ─────────────────────────────────────────────────────────────────
   app.useLogger(app.get(Logger));
+
+  // ── WebSocket (Socket.IO) ──────────────────────────────────────────────────
+  app.useWebSocketAdapter(new IoAdapter(app));
 
   // ── Security ────────────────────────────────────────────────────────────────
   app.use(

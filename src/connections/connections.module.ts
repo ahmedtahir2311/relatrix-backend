@@ -7,6 +7,6 @@ import { ConnectionsController } from './connections.controller';
 @Module({
   providers: [CryptoService, DbDriverFactory, ConnectionsService],
   controllers: [ConnectionsController],
-  exports: [CryptoService],
+  exports: [CryptoService, DbDriverFactory, ConnectionsService],
 })
 export class ConnectionsModule {}

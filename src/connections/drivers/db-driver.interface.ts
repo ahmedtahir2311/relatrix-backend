@@ -7,6 +7,8 @@ export interface TestConnectionResult {
 
 export interface IDbDriver {
   testConnection(): Promise<TestConnectionResult>;
+  // Execute a multi-statement SQL script (used for DIRECT_SEED)
+  executeSql(sql: string): Promise<void>;
   disconnect(): Promise<void>;
 }
 

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { BullModule } from '@nestjs/bullmq';
 import { LoggerModule } from 'nestjs-pino';
 import { DrizzleModule } from './database/drizzle.module';
 import { RedisModule } from './redis/redis.module';
@@ -7,8 +8,31 @@ import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { SchemasModule } from './schemas/schemas.module';
 import { ConnectionsModule } from './connections/connections.module';
+import { GenerationModule } from './generation/generation.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { env, isDev } from './config/env';
+
+function parseRedisConnection(url: string) {
+  try {
+    const u = new URL(url);
+    return {
+      host: u.hostname,
+      port: parseInt(u.port || '6379', 10),
+      password: u.password || undefined,
+      db: parseInt(u.pathname.replace(/^\//, '') || '0', 10),
+      lazyConnect: true,
+      enableReadyCheck: false,
+      maxRetriesPerRequest: null as unknown as number, // required by BullMQ
+    };
+  } catch {
+    return {
+      host: '127.0.0.1',
+      port: 6379,
+      lazyConnect: true,
+      maxRetriesPerRequest: null as unknown as number,
+    };
+  }
+}
 
 @Module({
   imports: [
@@ -23,15 +47,16 @@ import { env, isDev } from './config/env';
         },
       },
     }),
+    BullModule.forRoot({ connection: parseRedisConnection(env.REDIS_URL) }),
     DrizzleModule,
     RedisModule,
     HealthModule,
     AuthModule,
     SchemasModule,
     ConnectionsModule,
+    GenerationModule,
   ],
   providers: [
-    // Apply JwtAuthGuard globally — use @Public() to exempt a route
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
 })
