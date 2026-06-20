@@ -6,3 +6,6 @@ coverage/
 .DS_Store
 *.log
 drizzle/meta/
+
+
+pnpm-workspace.yaml

@@ -10,14 +10,22 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit() {
     this.client = new Redis(env.REDIS_URL, {
-      maxRetriesPerRequest: 3,
-      enableReadyCheck: true,
-      lazyConnect: false,
+      // lazyConnect lets the app start even if Redis isn't up yet
+      lazyConnect: true,
+      enableReadyCheck: false,
+      maxRetriesPerRequest: null,
+      retryStrategy: (times) => Math.min(times * 500, 5_000),
     });
 
     this.client.on('connect', () => this.logger.log('Redis connected'));
-    this.client.on('error', (err) => this.logger.error('Redis error', err.message));
+    this.client.on('ready', () => this.logger.log('Redis ready'));
+    this.client.on('error', (err) => this.logger.warn(`Redis unavailable: ${err.message}`));
     this.client.on('reconnecting', () => this.logger.warn('Redis reconnecting…'));
+
+    // Attempt connection in background — never crash the app if Redis is down
+    this.client.connect().catch((err) => {
+      this.logger.warn(`Redis initial connect failed (will retry): ${err.message}`);
+    });
   }
 
   async onModuleDestroy() {
