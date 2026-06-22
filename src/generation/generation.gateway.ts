@@ -6,8 +6,11 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
+import { JwtService } from '@nestjs/jwt';
 import type { Namespace, Server, Socket } from 'socket.io';
 import { env } from '../config/env';
+import { RedisService } from '../redis/redis.service';
+import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 
 export interface ProgressPayload {
   jobId: string;
@@ -29,8 +32,33 @@ export interface ProgressPayload {
 export class GenerationGateway implements OnGatewayInit {
   @WebSocketServer() server!: Namespace;
 
+  constructor(
+    private readonly jwt: JwtService,
+    private readonly redis: RedisService,
+  ) {}
+
   afterInit(_server: Server) {
-    // Gateway ready
+    this.server.use(async (socket: Socket, next) => {
+      // Accept token from either socket.handshake.auth.token or query param
+      const token =
+        (socket.handshake.auth?.token as string | undefined) ??
+        (socket.handshake.query?.token as string | undefined);
+
+      if (!token) return next(new Error('No authentication token provided'));
+
+      try {
+        const payload = this.jwt.verify<JwtPayload>(token);
+
+        if (await this.redis.isTokenBlacklisted(payload.jti)) {
+          return next(new Error('Token has been revoked'));
+        }
+
+        socket.data.userId = payload.sub;
+        next();
+      } catch {
+        next(new Error('Invalid or expired token'));
+      }
+    });
   }
 
   @SubscribeMessage('subscribe')

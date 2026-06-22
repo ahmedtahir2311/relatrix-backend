@@ -9,6 +9,7 @@ export interface JwtPayload {
   sub: string;
   jti: string;
   email: string;
+  rtjti?: string; // paired refresh token JTI — used to revoke it on sign-out
   iat?: number;
   exp?: number;
 }
@@ -18,6 +19,7 @@ export interface AuthenticatedUser {
   email: string;
   name: string;
   jti: string;
+  rtjti?: string;
 }
 
 @Injectable()
@@ -44,6 +46,6 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       throw new UnauthorizedException('User no longer exists');
     }
 
-    return { id: user.id, email: user.email, name: user.name, jti: payload.jti };
+    return { id: user.id, email: user.email, name: user.name, jti: payload.jti, rtjti: payload.rtjti };
   }
 }

@@ -24,6 +24,7 @@ import { forgotPasswordSchema, ForgotPasswordDto } from './dto/forgot-password.d
 import { resetPasswordSchema, ResetPasswordDto } from './dto/reset-password.dto';
 import { changePasswordSchema, ChangePasswordDto } from './dto/change-password.dto';
 import { updateProfileSchema, UpdateProfileDto } from './dto/update-profile.dto';
+import { refreshTokenSchema, RefreshTokenDto } from './dto/refresh-token.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -68,14 +69,22 @@ export class AuthController {
     return { ok: true };
   }
 
+  @Public()
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Issue a new access + refresh token pair (rotates the refresh token)' })
+  async refresh(@Body(new ZodValidationPipe(refreshTokenSchema)) dto: RefreshTokenDto) {
+    return this.authService.refresh(dto);
+  }
+
   // ── Authenticated routes ───────────────────────────────────────────────────
 
   @Post('sign-out')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Revoke the current access token' })
+  @ApiOperation({ summary: 'Revoke the current access token and its paired refresh token' })
   async signOut(@CurrentUser() user: AuthenticatedUser) {
-    await this.authService.signOut(user.jti);
+    await this.authService.signOut(user.jti, user.rtjti);
     return { ok: true };
   }
 

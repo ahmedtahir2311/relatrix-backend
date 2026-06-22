@@ -23,6 +23,7 @@ import type { UpdateProfileDto } from './dto/update-profile.dto';
 import type { ForgotPasswordDto } from './dto/forgot-password.dto';
 import type { ResetPasswordDto } from './dto/reset-password.dto';
 import type { ChangePasswordDto } from './dto/change-password.dto';
+import type { RefreshTokenDto } from './dto/refresh-token.dto';
 
 const BCRYPT_ROUNDS = 12;
 const RESET_TOKEN_EXPIRES_MINUTES = 60;
@@ -50,8 +51,8 @@ export class AuthService {
 
     await this.email.sendWelcome(user.email, user.name);
 
-    const { accessToken, expiresAt } = this.signToken(user.id, user.email);
-    return { user: this.users.toProfile(user), accessToken, expiresAt };
+    const tokens = await this.signTokenPair(user.id, user.email);
+    return { user: this.users.toProfile(user), ...tokens };
   }
 
   // ── Sign-in ────────────────────────────────────────────────────────────────
@@ -67,16 +68,44 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const { accessToken, expiresAt } = this.signToken(user.id, user.email);
-    return { user: this.users.toProfile(user), accessToken, expiresAt };
+    const tokens = await this.signTokenPair(user.id, user.email);
+    return { user: this.users.toProfile(user), ...tokens };
   }
 
   // ── Sign-out ───────────────────────────────────────────────────────────────
 
-  async signOut(jti: string): Promise<void> {
-    // Blacklist the token until its natural expiry
+  async signOut(jti: string, rtjti?: string): Promise<void> {
     const ttl = this.parseDurationToSeconds(env.JWT_EXPIRES_IN);
-    await this.redis.blacklistToken(jti, ttl);
+    const ops: Promise<unknown>[] = [this.redis.blacklistToken(jti, ttl)];
+    if (rtjti) ops.push(this.redis.revokeRefreshToken(rtjti));
+    await Promise.all(ops);
+  }
+
+  // ── Refresh ────────────────────────────────────────────────────────────────
+
+  async refresh(dto: RefreshTokenDto) {
+    let payload: { sub: string; jti: string; email: string; type?: string };
+    try {
+      payload = this.jwt.verify(dto.refreshToken) as typeof payload;
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    if (payload.type !== 'refresh') {
+      throw new UnauthorizedException('Invalid token type');
+    }
+
+    // consumeRefreshToken atomically fetches + deletes — prevents replay
+    const userId = await this.redis.consumeRefreshToken(payload.jti);
+    if (!userId) {
+      throw new UnauthorizedException('Refresh token has been revoked or already used');
+    }
+
+    const user = await this.users.findById(userId);
+    if (!user) throw new UnauthorizedException('User no longer exists');
+
+    const tokens = await this.signTokenPair(user.id, user.email);
+    return { user: this.users.toProfile(user), ...tokens };
   }
 
   // ── Profile ────────────────────────────────────────────────────────────────
@@ -184,15 +213,27 @@ export class AuthService {
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
-  private signToken(userId: string, userEmail: string) {
+  private async signTokenPair(userId: string, userEmail: string) {
     const jti = crypto.randomUUID();
-    const payload: JwtPayload = { sub: userId, jti, email: userEmail };
+    const rtjti = crypto.randomUUID();
+
+    // Refresh token — long-lived, type claim distinguishes it from access tokens
+    const refreshToken = this.jwt.sign(
+      { sub: userId, jti: rtjti, email: userEmail, type: 'refresh' },
+      { expiresIn: env.JWT_REFRESH_EXPIRES_IN as unknown as number },
+    );
+
+    // Access token — short-lived, carries back-reference to refresh token
+    const payload: JwtPayload = { sub: userId, jti, email: userEmail, rtjti };
     const accessToken = this.jwt.sign(payload);
 
     const decoded = this.jwt.decode(accessToken) as { exp: number };
     const expiresAt = new Date(decoded.exp * 1000).toISOString();
 
-    return { accessToken, expiresAt };
+    const refreshTtlSec = this.parseDurationToSeconds(env.JWT_REFRESH_EXPIRES_IN);
+    await this.redis.storeRefreshToken(rtjti, userId, refreshTtlSec);
+
+    return { accessToken, refreshToken, expiresAt };
   }
 
   private parseDurationToSeconds(duration: string): number {

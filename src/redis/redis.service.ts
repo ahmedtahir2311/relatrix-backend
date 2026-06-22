@@ -49,4 +49,23 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     const val = await this.client.get(`bl:${jti}`);
     return val === '1';
   }
+
+  // ── Refresh token store ──────────────────────────────────────────────────────
+
+  async storeRefreshToken(jti: string, userId: string, ttlSeconds: number): Promise<void> {
+    await this.client.setex(`rt:${jti}`, ttlSeconds, userId);
+  }
+
+  /** Fetches the userId then deletes the key in one round-trip. Returns null if already consumed or not found. */
+  async consumeRefreshToken(jti: string): Promise<string | null> {
+    const key = `rt:${jti}`;
+    const userId = await this.client.get(key);
+    if (!userId) return null;
+    await this.client.del(key);
+    return userId;
+  }
+
+  async revokeRefreshToken(jti: string): Promise<void> {
+    await this.client.del(`rt:${jti}`);
+  }
 }
