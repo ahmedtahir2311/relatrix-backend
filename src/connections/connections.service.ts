@@ -11,6 +11,7 @@ import { DbDriverFactory } from './drivers/db-driver.factory';
 import { Paginated } from '../common/paginated';
 import type { CreateConnectionDto } from './dto/create-connection.dto';
 import type { UpdateConnectionDto } from './dto/update-connection.dto';
+import type { ProbeConnectionDto } from './dto/probe-connection.dto';
 
 // Never expose passwordEncrypted to the API consumer
 const SAFE_COLUMNS = {
@@ -107,6 +108,23 @@ export class ConnectionsService {
       .delete(dbConnections)
       .where(and(eq(dbConnections.id, id), eq(dbConnections.userId, userId)));
     return { id };
+  }
+
+  async probe(dto: ProbeConnectionDto) {
+    const driver = this.factory.createFromConfig(dto.dialect, {
+      host: dto.host,
+      port: dto.port,
+      database: dto.database,
+      username: dto.username,
+      password: dto.password,
+      ssl: dto.ssl,
+    });
+
+    try {
+      return await driver.testConnection();
+    } finally {
+      await driver.disconnect().catch(() => undefined);
+    }
   }
 
   async test(id: string, userId: string) {

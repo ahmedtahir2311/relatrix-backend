@@ -9,6 +9,7 @@ import { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { createConnectionSchema, CreateConnectionDto } from './dto/create-connection.dto';
 import { updateConnectionSchema, UpdateConnectionDto } from './dto/update-connection.dto';
+import { probeConnectionSchema, ProbeConnectionDto } from './dto/probe-connection.dto';
 
 @ApiTags('connections')
 @ApiBearerAuth('access-token')
@@ -29,6 +30,16 @@ export class ConnectionsController {
     @Body(new ZodValidationPipe(createConnectionSchema)) dto: CreateConnectionDto,
   ) {
     return this.connections.create(user.id, dto);
+  }
+
+  @Post('probe')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Test raw credentials without creating a connection record' })
+  probe(
+    @CurrentUser() _user: AuthenticatedUser,
+    @Body(new ZodValidationPipe(probeConnectionSchema)) dto: ProbeConnectionDto,
+  ) {
+    return this.connections.probe(dto);
   }
 
   @Patch(':id')
