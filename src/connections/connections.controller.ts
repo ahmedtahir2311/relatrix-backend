@@ -59,6 +59,12 @@ export class ConnectionsController {
     return this.connections.delete(id, user.id);
   }
 
+  @Get(':id/credentials')
+  @ApiOperation({ summary: 'Reveal decrypted password for a saved connection' })
+  revealCredentials(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.connections.revealCredentials(id, user.id);
+  }
+
   @Post(':id/test')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Test a DB connection (5s timeout); persists status in DB' })

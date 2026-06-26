@@ -152,6 +152,11 @@ export class ConnectionsService {
     return result;
   }
 
+  async revealCredentials(id: string, userId: string) {
+    const full = await this.assertOwnership(id, userId);
+    return { password: this.crypto.decrypt(full.passwordEncrypted) };
+  }
+
   private async assertOwnership(id: string, userId: string) {
     const [conn] = await this.db.db
       .select()
