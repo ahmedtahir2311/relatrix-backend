@@ -225,15 +225,15 @@ export class AuthService {
 
     // Access token — short-lived, carries back-reference to refresh token
     const payload: JwtPayload = { sub: userId, jti, email: userEmail, rtjti };
-    const accessToken = this.jwt.sign(payload);
+    const token = this.jwt.sign(payload);
 
-    const decoded = this.jwt.decode(accessToken) as { exp: number };
+    const decoded = this.jwt.decode(token) as { exp: number };
     const expiresAt = new Date(decoded.exp * 1000).toISOString();
 
     const refreshTtlSec = this.parseDurationToSeconds(env.JWT_REFRESH_EXPIRES_IN);
     await this.redis.storeRefreshToken(rtjti, userId, refreshTtlSec);
 
-    return { accessToken, refreshToken, expiresAt };
+    return { token, refreshToken, expiresAt };
   }
 
   private parseDurationToSeconds(duration: string): number {
